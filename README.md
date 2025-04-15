@@ -1,86 +1,141 @@
-🧠 MIPS32 Pipelined Processor (Verilog)
-This project implements a 5-stage pipelined MIPS32 processor in Verilog, along with a testbench to simulate and verify its functionality. The processor supports basic arithmetic, memory operations, and branching, with a two-phase clock system (clk1 and clk2).
+# 🧠 MIPS32 Pipelined Processor (Verilog Implementation)
 
-📁 Files
+This project implements a 5-stage pipelined MIPS32 processor using Verilog. The processor supports a subset of MIPS instructions and demonstrates instruction flow through IF, ID, EX, MEM, and WB stages.
 
-File Name	Description
-mips32.v	Main processor module (pipe_MIPS32). Implements IF, ID, EX, MEM, WB stages.
-mips32_test.v	Testbench to simulate the MIPS processor behavior.
-mips32.vcd	Generated VCD (waveform) file from the testbench (if dumping is enabled).
-🏗️ Pipeline Stages
-IF (Instruction Fetch) – Fetches instruction from memory. Supports branch redirection.
+---
 
-ID (Instruction Decode) – Decodes opcode and reads registers.
+## 📁 Files
 
-EX (Execute) – Executes ALU operations or calculates memory/branch addresses.
+- `mips32.v`: The main pipelined processor module (`pipe_MIPS32`).
+- `mips32_test.v`: The testbench that simulates the processor.
+- `mips32.vcd`: Waveform output file (generated during simulation).
 
-MEM (Memory Access) – Loads or stores data to memory.
+---
 
-WB (Writeback) – Writes results back to registers.
+## 🚀 Processor: `pipe_MIPS32`
 
-🧾 Supported Instructions
+### ✅ Supported Instructions
 
-Opcode	Mnemonic	Type	Description
-000000	ADD	RR_ALU	Register + Register
-000001	SUB	RR_ALU	Register - Register
-000010	AND	RR_ALU	Bitwise AND
-000011	OR	RR_ALU	Bitwise OR
-000100	SLT	RR_ALU	Set if less than
-000101	MUL	RR_ALU	Multiply
-001010	ADDI	RM_ALU	Register + Immediate
-001011	SUBI	RM_ALU	Register - Immediate
-001100	SLTI	RM_ALU	Set if less than (imm)
-001000	LW	LOAD	Load word from memory
-001001	SW	STORE	Store word to memory
-001101	BNEQZ	BRANCH	Branch if not equal to zero
-001110	BEQZ	BRANCH	Branch if equal to zero
-111111	HLT	HALT	Halt processor
-🧪 Testbench Details (mips32_test.v)
-✅ Initialization
-Register bank is initialized with values 0 to 31.
+| Type      | Mnemonic | Opcode     |
+|-----------|----------|------------|
+| ALU (RR)  | ADD      | `000000`   |
+|           | SUB      | `000001`   |
+|           | AND      | `000010`   |
+|           | OR       | `000011`   |
+|           | SLT      | `000100`   |
+|           | MUL      | `000101`   |
+| ALU (RM)  | ADDI     | `001010`   |
+|           | SUBI     | `001011`   |
+|           | SLTI     | `001100`   |
+| Memory    | LW       | `001000`   |
+|           | SW       | `001001`   |
+| Branch    | BEQZ     | `001110`   |
+|           | BNEQZ    | `001101`   |
+| Special   | HLT      | `111111`   |
 
-Instruction memory is loaded with:
+### 🧱 Pipeline Stages
 
-ADDI, LW, ADDI, SW, and HLT instructions.
+1. **IF (Instruction Fetch)**
+2. **ID (Instruction Decode)**
+3. **EX (Execute)**
+4. **MEM (Memory Access)**
+5. **WB (Write Back)**
 
-Dummy instructions (OR R3, R3, R3) inserted for pipeline delays.
+### 🔍 Control Signals
+- `HALTED`: Signals the end of program execution.
+- `TAKEN_BRANCH`: Used to handle control hazards by detecting branches.
 
-🧾 Sample Program:
-assembly
-Copy
-Edit
-ADDI  R1, R0, 120      // R1 = 120
-LW    R2, 0(R1)        // R2 = Mem[120] = 80
-ADDI  R2, R2, 45       // R2 = R2 + 45 = 125
-SW    R2, 1(R1)        // Mem[121] = R2 = 125
-HLT                   // Stop execution
-🖨️ Output:
-After simulation:
+---
 
-bash
-Copy
-Edit
-MEM[120] = 80 
+## 🧪 Testbench: `mips32_test.v`
+
+### 🕹️ Clock Generation (Two-Phase Clock)
+```verilog
+repeat(20) begin
+    #5 clk1 = 1'b1; #5 clk1 = 1'b0;
+    #5 clk2 = 1'b1; #5 clk2 = 1'b0;
+end
+```
+- `clk1`: Triggers IF, EX, WB
+- `clk2`: Triggers ID, MEM
+
+### 🔧 Initialization
+```verilog
+for (k = 0; k < 32; k++)
+    mips.regbank[k] = k;
+```
+- Register file initialized with index values
+- Program Counter and control flags set
+
+### 📜 Instruction Sequence
+```assembly
+0:  ADDI R1, R0, 120
+1:  NOP
+2:  LW R2, 0(R1)
+3:  NOP
+4:  ADDI R2, R2, 45
+5:  NOP
+6:  SW R2, 1(R1)
+7:  HLT
+```
+- Dummy `OR R3,R3,R3` instructions simulate NOPs
+- Demonstrates memory load, arithmetic, and memory store
+
+### 🧾 Data Memory
+```verilog
+mips.Mem[120] = 80;  // Memory input
+```
+
+### ✅ Output Verification
+```verilog
+$display("MEM[120] = %4D \nMEM[121] = %4d", mips.Mem[120], mips.Mem[121]);
+```
+Expected:
+```
+MEM[120] = 80
 MEM[121] = 125
-▶️ How to Run
-bash
-Copy
-Edit
+```
+
+### 📉 Waveform Dump
+```verilog
+$dumpfile("mips32.vcd");
+$dumpvars(0, mips_test);
+```
+Use GTKWave to visualize pipeline execution.
+
+---
+
+## ▶️ Running Simulation
+
+```bash
 iverilog -o mysim mips32.v mips32_test.v
 vvp mysim
-To view waveform:
+```
 
-bash
-Copy
-Edit
+> Ensure both `.v` files are in the same directory before running.
+
+---
+
+## 👀 Output Sample
+```
+MEM[120] =   80
+MEM[121] =  125
+```
+This confirms correct execution of LW, ADDI, SW, and HALT instructions.
+
+---
+
+## 📈 Visualization
+Open `mips32.vcd` with GTKWave:
+```bash
 gtkwave mips32.vcd
-🛠️ Features
-5-stage pipeline with data forwarding control via TAKEN_BRANCH.
+```
+Observe signal propagation across pipeline stages.
 
-Branch handling (BEQZ, BNEQZ) implemented.
+---
 
-Immediate sign-extension.
+## 📌 Conclusion
+This MIPS32 implementation offers a basic yet functional 5-stage pipeline model, suitable for academic simulation of pipelining, hazards, control flow, and memory interaction in hardware design.
 
-Memory-mapped instruction/data memory (1024 x 32-bit).
+Feel free to extend the instruction set, add hazard detection, or implement forwarding!
 
-# MIPS32-PROCESSOR-
