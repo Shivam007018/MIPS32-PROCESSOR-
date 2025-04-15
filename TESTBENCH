@@ -1,0 +1,61 @@
+
+ 
+//load a word stored in memory location 120 add 45 to it and stored the result in memory location 121.
+// code ADDI R1 ,R0,120;
+        LW R2 , 0(R1);
+        ADDI R2 , R2,45;
+        SW  R2 ,1(R1);
+        HLT ;    // 
+
+module mips_test;
+reg clk1, clk2;
+integer k;
+
+pipe_MIPS32 MIPS (clk1, clk2);
+
+// Clock cycle generation
+initial
+begin
+    clk1 = 1'b0;
+    clk2 = 1'b0;
+
+    repeat (20)
+    begin
+        #5 clk1 = 1'b1; #5 clk1 = 1'b0;
+        #5 clk2 = 1'b1; #5 clk2 = 1'b0;
+    end
+end
+
+initial
+begin
+    for (k = 0; k < 32; k = k + 1)
+        MIPS.regbank[k] = k;
+
+    MIPS.Mem[0] = 32'h28010078;  // ADDI R1, R0, 120
+    MIPS.Mem[1] = 32'h0c631800;  // OR R3, R3, R3 -- dummy instr.
+    MIPS.Mem[2] = 32'h20220000;  // LW R2, 0(R1)
+    MIPS.Mem[3] = 32'h0c631800;  // OR R3, R3, R3 -- dummy instr.
+    MIPS.Mem[4] = 32'h2842002d;  // ADDI R2, R2, 45
+    MIPS.Mem[5] = 32'h0c631800;  // OR R3, R3, R3 -- dummy instr.
+    MIPS.Mem[6] = 32'h24220001;  // SW R2, 1(R1)
+    MIPS.Mem[7] = 32'hfc000000;  // HLT
+
+    MIPS.Mem[120] = 80;
+
+    MIPS.PC = 0;
+    MIPS.HALTED = 0;
+    MIPS.TAKEN_BRANCH = 0;
+
+    #600
+    $display("MEM[120] = %4D \nMEM[121] = %4D", MIPS.Mem[120], MIPS.Mem[121]);
+end
+
+initial
+begin
+    $dumpfile("mips32.vcd");
+    $dumpvars(0, mips_test);
+    #600 $finish;
+end
+
+endmodule
+ 
